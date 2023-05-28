@@ -1,6 +1,6 @@
 package Model;
 
-import DAO.Road;
+import POJO.Road;
 
 import java.util.ArrayList;
 

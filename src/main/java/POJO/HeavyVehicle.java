@@ -1,4 +1,4 @@
-package DAO;
+package POJO;
 
 class HeavyVehicle extends Vehicle {
 

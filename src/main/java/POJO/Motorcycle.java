@@ -1,4 +1,4 @@
-package DAO;
+package POJO;
 
 class Motorcycle extends Vehicle {
 

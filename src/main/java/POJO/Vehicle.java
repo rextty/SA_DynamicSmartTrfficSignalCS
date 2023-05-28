@@ -1,4 +1,4 @@
-package DAO;
+package POJO;
 
 public abstract class Vehicle {
     private final int amount;

@@ -1,12 +1,12 @@
 package Model;
 
-import DAO.Vehicle;
+import POJO.Vehicle;
 
 import java.util.ArrayList;
 
 public class ScanVehicle {
-    private ArrayList<Vehicle> vehicles;
     private String modelString;
+    private ArrayList<Vehicle> vehicles;
 
     public int getVehicleCount() {return 0;}
 
