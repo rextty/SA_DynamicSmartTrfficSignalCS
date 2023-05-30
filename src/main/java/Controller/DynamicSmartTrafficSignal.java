@@ -1,9 +1,15 @@
 package Controller;
 
 import POJO.Communication;
-import POJO.Road;
+import POJO.Intersection.Road;
+import POJO.Intersection.TrafficSignalPeriod;
+
 import Model.*;
-import Enum.*;
+import Enum.ESignal;
+import Enum.EDirection;
+import Enum.EInstruction;
+
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,19 +18,16 @@ import org.java_websocket.handshake.ServerHandshake;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
-// TODO: CentralController
 public class DynamicSmartTrafficSignal extends WebSocketClient {
 
     private final ObjectMapper mapper;
 
-    private JsonNode trafficPeriod;
-
-    private JsonNode currentTrafficState;
-
     private int solutionMode;
-    private ArrayList<Road> roads;
+    private Map<String, Road> roads;
 
     private ScanVehicle scanVehicle;
     private TrafficSignal trafficSignal;
@@ -36,23 +39,46 @@ public class DynamicSmartTrafficSignal extends WebSocketClient {
         this.connectBlocking();
 
         mapper = new ObjectMapper();
-        roads = new ArrayList<>();
+
+        Road roadEast = new Road(EDirection.EAST);
+        Road roadWest = new Road(EDirection.WEST);
+        Road roadSouth = new Road(EDirection.SOUTH);
+        Road roadNorth = new Road(EDirection.NORTH);
+
+        roads = new HashMap<>();
+        roads.put(roadEast.getDirection().name(), roadEast);
+        roads.put(roadWest.getDirection().name(), roadWest);
+        roads.put(roadSouth.getDirection().name(), roadSouth);
+        roads.put(roadNorth.getDirection().name(), roadNorth);
+
         trafficSignal = new TrafficSignal();
         scoreCalculator = new RoadScoreCalculator();
         timingCalculator = new SignalTimingCalculator();
 
+        // Update Traffic Status
         Communication communication = new Communication();
-        communication.setInstruction(EInstruction.REQUIRE_DATA_TRAFFIC_PERIOD.toString());
-        String jsonInString = mapper.writeValueAsString(communication);
-        this.send(jsonInString);
+        while (true) {
+            communication.setInstruction(EInstruction.REQUIRE_DATA_TRAFFIC_PERIOD.toString());
+            String jsonInString = mapper.writeValueAsString(communication);
+            this.send(jsonInString);
 
-        communication.setInstruction(EInstruction.REQUIRE_DATA_CURRENT_TRAFFIC_STATE.toString());
-        this.send(mapper.writeValueAsString(communication));
+            communication.setInstruction(EInstruction.REQUIRE_DATA_CURRENT_TRAFFIC_STATE.toString());
+            this.send(mapper.writeValueAsString(communication));
+            Thread.sleep(2000);
+        }
+        // TODO: 兩種方式取得紅綠燈資訊, 1. 定期請求資料 2. 有需要時我再去取得資料 目前是1
     }
 
     private void initialization() {}
 
     private void switchMode(int mode) {}
+
+    private Runnable updateTrafficStatus = new Runnable() {
+        @Override
+        public void run() {
+
+        }
+    };
 
     private Runnable checkEmergency = new Runnable() {
         @Override
@@ -78,15 +104,24 @@ public class DynamicSmartTrafficSignal extends WebSocketClient {
     @Override
     public void onMessage(String message) {
         try {
-            JsonNode node = mapper.readTree(message);
-
-            String instruction = node.path("instruction").asText();
+            JsonNode root = mapper.readTree(message);
+            String instruction = root.path("instruction").asText();
             if (instruction.equals(EInstruction.SEND_DATA_TRAFFIC_PERIOD.name())) {
-                trafficPeriod = node.path("data");
-                System.out.println(trafficPeriod);
+                Iterator<Map.Entry<String, JsonNode>> nodes = root.get("data").fields();
+                TrafficSignalPeriod period = new TrafficSignalPeriod();
+                while (nodes.hasNext()) {
+                    Map.Entry<String, JsonNode> entry = nodes.next();
+                    period.setGreenSecond(entry.getValue().get(ESignal.GREEN.name()).asInt());
+                    period.setYellowSecond(entry.getValue().get(ESignal.YELLOW.name()).asInt());
+                    period.setRedSecond(entry.getValue().get(ESignal.RED.name()).asInt());
+                    roads.get(entry.getKey()).getTrafficSignal().setSignalPeriod(period);
+                }
             } else if (instruction.equals(EInstruction.SEND_DATA_CURRENT_TRAFFIC_STATE.name())) {
-                currentTrafficState = node.path("data");
-                System.out.println(currentTrafficState);
+                Iterator<Map.Entry<String, JsonNode>> nodes = root.get("data").fields();
+                while (nodes.hasNext()) {
+                    Map.Entry<String, JsonNode> entry = nodes.next();
+                    roads.get(entry.getKey()).getTrafficSignal().setSignal(entry.getValue().asText());
+                }
             }
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);

@@ -1,6 +1,6 @@
 package Model;
 
-import POJO.Vehicle;
+import POJO.Vehicle.Vehicle;
 
 import java.util.ArrayList;
 

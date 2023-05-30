@@ -1,4 +1,4 @@
-package POJO;
+package POJO.Intersection;
 
 public class TrafficSignalPeriod {
     private int greenSecond;

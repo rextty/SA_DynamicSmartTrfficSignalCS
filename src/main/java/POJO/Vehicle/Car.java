@@ -1,4 +1,4 @@
-package POJO;
+package POJO.Vehicle;
 
 class Car extends Vehicle {
 

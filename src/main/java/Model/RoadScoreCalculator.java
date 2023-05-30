@@ -1,6 +1,6 @@
 package Model;
 
-import POJO.Road;
+import POJO.Intersection.Road;
 
 import java.util.ArrayList;
 

@@ -10,7 +10,7 @@
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
-      <module name="SA_DynamicSmartTrfficSignalCS" target="19" />
+      <module name="SA_DynamicSmartTrfficSignalCS" target="17" />
     </bytecodeTargetLevel>
   </component>
 </project>

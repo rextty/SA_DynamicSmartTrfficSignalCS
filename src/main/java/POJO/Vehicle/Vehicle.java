@@ -1,4 +1,4 @@
-package POJO;
+package POJO.Vehicle;
 
 public abstract class Vehicle {
     private final int amount;
