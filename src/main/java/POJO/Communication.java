@@ -5,16 +5,16 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 public class Communication {
 
     private String instruction;
-    private String data;
+    private TrafficPeriodData data;
 
-    public Communication(String instruction, String data) {
+    public Communication(String instruction, TrafficPeriodData data) {
         this.instruction = instruction;
         this.data = data;
     }
 
     public Communication() {}
 
-    public void setData(String data) {
+    public void setData(TrafficPeriodData data) {
         this.data = data;
     }
 
@@ -22,7 +22,7 @@ public class Communication {
         this.instruction = instruction;
     }
 
-    public String getData() {
+    public TrafficPeriodData getData() {
         return data;
     }
 

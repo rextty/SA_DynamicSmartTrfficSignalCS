@@ -5,11 +5,13 @@ import POJO.Intersection.Road;
 import POJO.Intersection.TrafficSignalPeriod;
 
 import Model.*;
+import Enum.EMode;
 import Enum.ESignal;
 import Enum.EDirection;
 import Enum.EInstruction;
 
 
+import POJO.TrafficPeriodData;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -58,12 +60,22 @@ public class DynamicSmartTrafficSignal extends WebSocketClient {
         // Update Traffic Status
         Communication communication = new Communication();
         while (true) {
-            communication.setInstruction(EInstruction.REQUIRE_DATA_TRAFFIC_PERIOD.toString());
+            communication.setInstruction(EInstruction.REQUIRE_DATA_TRAFFIC_PERIOD.name());
             String jsonInString = mapper.writeValueAsString(communication);
             this.send(jsonInString);
 
-            communication.setInstruction(EInstruction.REQUIRE_DATA_CURRENT_TRAFFIC_STATE.toString());
+            communication.setInstruction(EInstruction.REQUIRE_DATA_CURRENT_TRAFFIC_STATE.name());
             this.send(mapper.writeValueAsString(communication));
+
+            // Testing...
+            TrafficSignalPeriod trafficJam = new TrafficSignalPeriod(10, 5, 10);
+            TrafficSignalPeriod nonTrafficJam = new TrafficSignalPeriod(10, 5, 10);
+            TrafficPeriodData data = new TrafficPeriodData(EMode.TRAFFIC_JAM, trafficJam, nonTrafficJam);
+
+            communication.setInstruction(EInstruction.SWITCH_MODE.name());
+            communication.setData(data);
+            this.send(mapper.writeValueAsString(communication));
+
             Thread.sleep(2000);
         }
         // TODO: 兩種方式取得紅綠燈資訊, 1. 定期請求資料 2. 有需要時我再去取得資料 目前是1
