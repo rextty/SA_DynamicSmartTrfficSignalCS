@@ -88,6 +88,7 @@ public class TrafficSignal {
     }
     
     //採取預設值（不確定大家共識的各燈號時間長度，暫參考張庭碩的word檔）
+	//但是不同路段的紅綠燈預設時間可能不同，有要考量到這點的話，這部分得再想想
     public void adoptDefault() {
         greenLightDuration = 30;
         yellowLightDuration = 5;
