@@ -26,17 +26,17 @@ public class Road {
     }
     
     public void calScore() {
-		int totalScore = 0;
+	int totalScore = 0;
 
-		// 各車種自己的分數計算是可以這樣直接呼叫去計算的嗎
+	// 各車種自己的分數計算是可以這樣直接呼叫去計算的嗎
         for (Vehicle vehicle : vehicles) {
-			vehicle.calScore(); // 呼叫calScore()函數後當前車車物件score就有值
+	    vehicle.calScore(); // 呼叫calScore()函數後當前車車物件score就有值
             totalScore += vehicle.getScore(); // 呼叫getScore()函數獲得當前車車score
         }
         score = totalScore; // 算完就直接賦值了
-	}
+    }
     
     public int getScore() {
-		return score;
-	}
+	return score;
+    }
 }
