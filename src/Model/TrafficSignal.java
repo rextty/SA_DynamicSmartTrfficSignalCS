@@ -14,12 +14,26 @@ public class TrafficSignal {
     private int yellowLightDuration;
     private int redLightDuration;
     
+    /* 若要考慮到各路口燈號時間長度不一定，則需要額外設置屬性儲存預設值
+    private int defaultGreen;
+    private int defaultRed;
+    private int defaultYellow;
+    */
+	
+    
     // 傳入的參數direction->以建立不同方向的紅綠燈物件
     public TrafficLight(char direction, int greenDuration, int yellowDuration, int redDuration) {
         this.direction = direction;
         this.greenDuration = greenDuration;
         this.yellowDuration = yellowDuration;
         this.redDuration = redDuration;
+	    
+	/*若要考慮到各路口燈號時間長度不一定，將傳入的參數設為預設值
+	this.defaultGreen = greenDuration;
+        this.defaultYellow = yellowDuration;
+        this.defaultRed = redDuration;
+	*/
+	    
         this.currentState = "red"; // 初始狀態為紅燈
     }
     
@@ -88,15 +102,21 @@ public class TrafficSignal {
     }
     
     //採取預設值（不確定大家共識的各燈號時間長度，暫參考張庭碩的word檔）
-	//但是不同路段的紅綠燈預設時間可能不同，有要考量到這點的話，這部分得再想想
+    //不考慮各路口的燈號時間不一，直接將我們定的數字寫進去
     public void adoptDefault() {
         greenLightDuration = 30;
         yellowLightDuration = 5;
         redLightDuration = 30;
+	    
+	/*若要考慮到各路口燈號時間長度不一定，則是透過預設值屬性去賦值
+        greenDuration = this.defaultGreen;
+	yellowDuration = this.defaultYellow;
+	redDuration = this.defaultRed;
+	*/
     }
     
-    // 循序圖中最後顯示給vehicle的帕，不確定這部分是不是需要跟我們模擬的道路畫面相連接
-    public void performSignal(){};
+    // 循序圖中最後顯示給vehicle的帕，不確定我們java程式碼跟實際所展示的模擬畫面是否有關
+    // public void performSignal(){}
     
     //原本的設置燈號函數
     //public void changeSignal(int roadID, int time, int signalState) {}
