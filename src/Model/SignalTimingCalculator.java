@@ -10,20 +10,20 @@ public class SignalTimingCalculator {
     private int WEsignalTime;
 
     public int getNSsignalTime() {return NSsignalTime;}
-	public int getWEsignalTime() {return WEsignalTime;}
+    public int getWEsignalTime() {return WEsignalTime;}
     
     public void calSignalTime(int NS, int WE) {
     	int time;
-		if(NS > WE){
-			time = (NS - 300)/5;
-			// 基於預設時間去做加減，暫直接寫入我們所定之預設值(30)
-			NSsignalTime = 30 + time;
-			WEsignalTime = 30 - time;
-		} else{
-			time = (WE - 300)/5;
-			WEsignalTime = 30 + time;
-			NSsignalTime = 30 - time;
-		}
+	if(NS > WE){
+	    time = (NS - 300)/5;
+	    // 基於預設時間去做加減，暫直接寫入我們所定之預設值(30)
+	    NSsignalTime = 30 + time;
+	    WEsignalTime = 30 - time;
+	} else{
+	    time = (WE - 300)/5;
+	    WEsignalTime = 30 + time;
+	    NSsignalTime = 30 - time;
+	}
     }
 
 }
