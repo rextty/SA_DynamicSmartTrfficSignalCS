@@ -14,17 +14,20 @@ public class RoadScoreCalculator {
 
     public RoadScoreCalculator() {}
 
+    // 讓controller可以利用getWERoadScore()、getNSRoadScore()去得到分數，以判斷是否壅塞
+    // calSignalTime(int NS, int WE)需要傳入兩邊的分數以進行後續的計算，RoadScoreCalculator.getWERoadScore()直接作為參數不確定可不可行；
+    // 或是controller那邊需要額外設立屬性先去儲存回傳值，再作為參數傳入calSignalTime
     public int getWERoadScore() {return WEroadScore;}
     public int getNSRoadScore() {return NSroadScore;}
 
     // 先判斷road是哪個方向，再去做NS或WE的加總
     public void calRoadScore(ArrayList<Road> roads) {
         for (Road road: roads) {
-	    // direction是int，具體數值是?
-	    if(road.direction == 'N' || road.direction == 'S'){
+	    // direction是int，具體數值是？（暫以字元表示，較好理解）
+	    if(road.getDirection() == 'N' || road.getDirection() == 'S'){
 	        NSroadScore += road.getScore();
 	    }
-	    if(road.direction == 'W' || road.direction == 'E'){
+	    if(road.getDirection() == 'W' || road.getDirection() == 'E'){
 	        WEroadScore += road.getScore();
 	    }
         }
