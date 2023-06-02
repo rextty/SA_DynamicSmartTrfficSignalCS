@@ -39,4 +39,9 @@ public class Road {
     public int getScore() {
 	return score;
     }
+
+    // RoadScoreCalculator 會需要知道道路的方向，以進行NS或WE向的道路分數加總
+    public int getDirection() {
+        return direction;
+    }
 }
