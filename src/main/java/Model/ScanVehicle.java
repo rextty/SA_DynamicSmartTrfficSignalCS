@@ -2,20 +2,19 @@ package Model;
 
 import POJO.Vehicle.Vehicle;
 import org.opencv.core.*;
+import org.opencv.dnn.DetectionModel;
 import org.opencv.dnn.Dnn;
 import org.opencv.dnn.Net;
+import org.opencv.highgui.HighGui;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
-import org.opencv.utils.Converters;
-import org.opencv.videoio.VideoCapture;
 
-import javax.imageio.ImageIO;
-import javax.swing.*;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 public class ScanVehicle {
@@ -24,128 +23,55 @@ public class ScanVehicle {
 
     private ArrayList<Vehicle> vehicles;
 
+    private String modelWeightsPath;
+    private String modelConfigurationPath;
+    private String cocoLabelPath;
+
     public ScanVehicle() {
-        // Load OpenCV
         nu.pattern.OpenCV.loadLocally();
 
         String dataPath = System.getProperty("user.dir") + "\\src\\main\\java\\Data\\";
-
-        String modelWeights = dataPath + "yolov7-tiny.weights";
-        String modelConfiguration = dataPath + "yolov7-tiny.cfg";
-        String filePath = dataPath + "car.mp4"; //My video  file to be analysed
-        VideoCapture cap = new VideoCapture(filePath); // Load video using the videoCapture method//
-        Mat frame = new Mat(); // define a matrix to extract and store pixel info from video//
-        Mat dst = new Mat ();
-        //cap.read(frame);
-        JFrame jframe = new JFrame("Video"); // the lines below create a frame to display the resultant video with object detection and localization//
-        JLabel vidPanel = new JLabel();
-        jframe.setContentPane(vidPanel);
-        jframe.setSize(600, 600);
-        jframe.setVisible(true); // we instantiate the frame here//
-
-        // OpenCV DNN supports models trained from various frameworks like Caffe and TensorFlow. It also supports various networks architectures based on YOLO//
-        Net net = Dnn.readNetFromDarknet(modelConfiguration, modelWeights);
-        // Thread.sleep(5000);
-
-        //Mat image = Imgcodecs.imread("D:\\yolo-object-detection\\yolo-object-detection\\images\\soccer.jpg");
-        Size sz = new Size(288,288);
-
-        List<Mat> result = new ArrayList<>();
-        List<String> outBlobNames = getOutputNames(net);
-
-        while (true) {
-            if (cap.read(frame)) {
-                Mat blob = Dnn.blobFromImage(frame, 0.00392, sz, new Scalar(0), true, false); // We feed one frame of video into the network at a time, we have to convert the image to a blob. A blob is a pre-processed image that serves as the input.//
-                net.setInput(blob);
-                net.forward(result, outBlobNames); //Feed forward the model to get output //
-
-                // outBlobNames.forEach(System.out::println);
-                // result.forEach(System.out::println);
-
-                float confThreshold = -0.6f; // Insert thresholding beyond which the model will detect objects
-
-                List<Integer> clsIds = new ArrayList<>();
-                List<Float> confs = new ArrayList<>();
-                List<Rect2d> rects = new ArrayList<>();
-
-                for (int i = 0; i < result.size(); ++i) {
-                    // each row is a candidate detection, the 1st 4 numbers are
-                    // [center_x, center_y, width, height], followed by (N-4) class probabilities
-                    Mat level = result.get(i);
-                    for (int j = 0; j < level.rows(); ++j) {
-                        Mat row = level.row(j);
-                        Mat scores = row.colRange(5, level.cols());
-                        Core.MinMaxLocResult mm = Core.minMaxLoc(scores);
-                        float confidence = (float) mm.maxVal;
-                        Point classIdPoint = mm.maxLoc;
-
-                        if (confidence > confThreshold) {
-                            int centerX = (int)(row.get(0,0)[0] * frame.cols()); //scaling for drawing the bounding boxes//
-                            int centerY = (int)(row.get(0,1)[0] * frame.rows());
-                            int width   = (int)(row.get(0,2)[0] * frame.cols());
-                            int height  = (int)(row.get(0,3)[0] * frame.rows());
-                            int left    = centerX - width  / 2;
-                            int top     = centerY - height / 2;
-
-                            clsIds.add((int)classIdPoint.x);
-                            confs.add(confidence);
-                            rects.add(new Rect2d(left, top, width, height));
-                        }
-                    }
-                }
-                float nmsThresh = 0.5f;
-
-                System.out.println(confs);
-                MatOfFloat confidences = new MatOfFloat(Converters.vector_float_to_Mat(confs));
-                Rect2d[] boxesArray = rects.toArray(new Rect2d[0]);
-                MatOfRect2d boxes = new MatOfRect2d();
-                MatOfInt indices = new MatOfInt();
-                Dnn.NMSBoxes(boxes, confidences, confThreshold, nmsThresh, indices); //We draw the bounding boxes for objects here//
-
-                int [] ind = indices.toArray();
-                int j=0;
-                for (int i = 0; i < ind.length; ++i) {
-                    int idx = ind[i];
-                    Rect2d box = boxesArray[idx];
-                    Imgproc.rectangle(frame, box.tl(), box.br(), new Scalar(0,0,255), 2);
-                    //i=j;
-
-                    System.out.println(idx);
-                }
-                // Imgcodecs.imwrite("D://out.png", image);
-                //System.out.println("Image Loaded");
-                ImageIcon image = new ImageIcon(Mat2bufferedImage(frame)); //setting the results into a frame and initializing it //
-                vidPanel.setIcon(image);
-                vidPanel.repaint();
-                // System.out.println(j);
-                // System.out.println("Done");
-
-            }
-        }
+        modelWeightsPath = dataPath + "yolov7.weights";
+        modelConfigurationPath = dataPath + "yolov7.cfg";
+        cocoLabelPath = dataPath + "coco.names";
     }
 
-    private static List<String> getOutputNames(Net net) {
-        List<String> names = new ArrayList<>();
-        List<Integer> outLayers = net.getUnconnectedOutLayers().toList();
-        List<String> layersNames = net.getLayerNames();
+    public void initialization() {}
 
-        outLayers.forEach((item) -> names.add(layersNames.get(item - 1)));//unfold and create R-CNN layers from the loaded YOLO model//
-        return names;
-    }
+    public void scan(String base64Str) {
+        byte[] imgData = Base64.getDecoder().decode(base64Str);
+        Mat imgMat = new Mat(1, imgData.length, CvType.CV_8UC1);
+        imgMat.put(0, 0, imgData);
 
-    private static BufferedImage Mat2bufferedImage(Mat image) {   // The class described here  takes in matrix and renders the video to the frame  //
-        MatOfByte byteMat = new MatOfByte();
-        Imgcodecs.imencode(".jpg", image, byteMat);
-        byte[] bytes = byteMat.toArray();
-        InputStream in = new ByteArrayInputStream(bytes);
-        BufferedImage img = null;
+        Mat img = Imgcodecs.imdecode(imgMat, Imgcodecs.IMREAD_COLOR);
+
+        List<String> classes;
         try {
-            img = ImageIO.read(in);
+            classes = Files.readAllLines(Paths.get(cocoLabelPath));
         } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return img;
+
+        Net net = Dnn.readNetFromDarknet(modelConfigurationPath, modelWeightsPath);
+
+        DetectionModel model = new DetectionModel(net);
+        model.setInputParams(1 / 255.0, new Size(1402, 832), new Scalar(0), true);
+
+        MatOfInt classIds = new MatOfInt();
+        MatOfFloat scores = new MatOfFloat();
+        MatOfRect boxes = new MatOfRect();
+        model.detect(img, classIds, scores, boxes, 0.5f, 0.5f);
+
+        for (int i = 0; i < classIds.rows(); i++) {
+            Rect box = new Rect(boxes.get(i, 0));
+            Imgproc.rectangle(img, box, new Scalar(0, 255, 0), 2);
+
+            int classId = (int) classIds.get(i, 0)[0];
+            double score = scores.get(i, 0)[0];
+            String text = String.format("%s: %.2f", classes.get(classId), score);
+            System.out.println(text);
+            Imgproc.putText(img, text, new Point(box.x, box.y - 5), Imgproc.FONT_HERSHEY_SIMPLEX, 1, new Scalar(0, 255, 0), 2);
+        }
     }
 
     public int getVehicleCount() {return 0;}
