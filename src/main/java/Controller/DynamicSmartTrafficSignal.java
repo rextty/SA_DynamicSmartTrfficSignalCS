@@ -5,13 +5,14 @@ import POJO.Intersection.Road;
 import POJO.Intersection.TrafficSignalPeriod;
 
 import Model.*;
-import Enum.EMode;
-import Enum.ESignal;
-import Enum.EDirection;
-import Enum.EInstruction;
+import Enum.*;
 
 
 import POJO.TrafficPeriodData;
+import POJO.Vehicle.Car;
+import POJO.Vehicle.HeavyVehicle;
+import POJO.Vehicle.Motorcycle;
+import POJO.Vehicle.Vehicle;
 import Repository.CCTVRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -19,26 +20,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
-import javax.imageio.ImageIO;
-import javax.swing.*;
-import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.sql.Blob;
-import java.sql.SQLException;
 import java.util.*;
 
 public class DynamicSmartTrafficSignal extends WebSocketClient {
-
     private final ObjectMapper mapper;
 
     private int solutionMode;
     private Map<String, Road> roads;
-
     private ScanVehicle scanVehicle;
 
     private ArrayList<String> CCTVImages;
@@ -47,9 +37,13 @@ public class DynamicSmartTrafficSignal extends WebSocketClient {
     private RoadScoreCalculator scoreCalculator;
     private SignalTimingCalculator timingCalculator;
 
+    private int trafficJamCondition;
+
     public DynamicSmartTrafficSignal(URI serverURI) throws URISyntaxException, InterruptedException, JsonProcessingException {
         super(serverURI);
         this.connectBlocking();
+
+        trafficJamCondition = 300;
 
         mapper = new ObjectMapper();
         scanVehicle = new ScanVehicle();
@@ -60,8 +54,11 @@ public class DynamicSmartTrafficSignal extends WebSocketClient {
 
         initialization();
 
-        Thread cctvThread = new Thread(getCCTVImage);
-        cctvThread.start();
+        Thread trafficJamThread = new Thread(checkTrafficJam);
+        trafficJamThread.start();
+
+        Thread emergencyThread = new Thread(checkEmergency);
+        emergencyThread.start();
 
         // Update Traffic Status
         Communication communication = new Communication();
@@ -70,16 +67,12 @@ public class DynamicSmartTrafficSignal extends WebSocketClient {
             String jsonInString = mapper.writeValueAsString(communication);
             this.send(jsonInString);
 
-            communication.setInstruction(EInstruction.REQUIRE_DATA_CURRENT_TRAFFIC_STATE.name());
+            communication.setInstruction(EInstruction.REQUIRE_DATA_CURRENT_TRAFFIC_SIGNAL_STATE.name());
             this.send(mapper.writeValueAsString(communication));
 
-            // Testing...
-//            TrafficSignalPeriod trafficJam = new TrafficSignalPeriod(10, 5, 10);
-//            TrafficSignalPeriod nonTrafficJam = new TrafficSignalPeriod(10, 5, 10);
-//            TrafficPeriodData data = new TrafficPeriodData(EMode.TRAFFIC_JAM, trafficJam, nonTrafficJam);
-//            communication.setInstruction(EInstruction.SWITCH_MODE.name());
-//            communication.setData(data);
-//            this.send(mapper.writeValueAsString(communication));
+            communication.setInstruction(EInstruction.REQUIRE_DATA_CURRENT_TRAFFIC_STATUS.name());
+            this.send(mapper.writeValueAsString(communication));
+
             Thread.sleep(1000);
         }
         // TODO: 兩種方式取得紅綠燈資訊, 1. 定期請求資料 2. 有需要時我再去取得資料 目前是1
@@ -98,52 +91,95 @@ public class DynamicSmartTrafficSignal extends WebSocketClient {
         roads.put(roadNorth.getDirection().name(), roadNorth);
     }
 
-    private void switchMode(int mode) {
+    private void switchMode(EMode mode, ArrayList<String> trafficJamRoad, TrafficSignalPeriod trafficJam, TrafficSignalPeriod nonTrafficJam) {
+        Communication communication = new Communication();
 
+        switch (mode) {
+            case NORMAL -> {
+                TrafficPeriodData nData = new TrafficPeriodData(EMode.NORMAL, trafficJamRoad, trafficJam, nonTrafficJam);
+                communication.setInstruction(EInstruction.SWITCH_MODE.name());
+                communication.setData(nData);
+            }
+            case TRAFFIC_JAM -> {
+                TrafficPeriodData tData = new TrafficPeriodData(EMode.TRAFFIC_JAM, trafficJamRoad, trafficJam, nonTrafficJam);
+                communication.setInstruction(EInstruction.SWITCH_MODE.name());
+                communication.setData(tData);
+            }
+            default -> {
+                return;
+            }
+        }
+
+        try {
+            this.send(mapper.writeValueAsString(communication));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    private Runnable getCCTVImage = new Runnable() {
+    private Runnable checkEmergency = new Runnable() {
+        @Override
+        public void run() {
+            // TODO: get database data...
+        }
+    };
+
+    private Runnable checkTrafficJam = new Runnable() {
         @Override
         public void run() {
             while (true) {
+                scoreCalculator.calRoadScore(roads);
+                System.out.println("NS: " + scoreCalculator.getNSRoadScore());
+                System.out.println("WE: " + scoreCalculator.getWERoadScore());
+
+                if (Objects.equals(roads.get(EDirection.EAST.name()).getTrafficSignal().getSignal(), ESignal.YELLOW.name())) {
+                    scoreCalculator.calRoadScore(roads);
+                    int nsScore = scoreCalculator.getNSRoadScore();
+                    int weScore = scoreCalculator.getWERoadScore();
+
+                    ArrayList<String> trafficJamRoads = new ArrayList<>();
+
+                    // TODO: 先不判斷兩邊都塞...
+                    if (nsScore >= trafficJamCondition) {
+                        int x = (nsScore - trafficJamCondition) / 5;
+                        int greenSecond = roads.get(EDirection.NORTH.name()).getTrafficSignal().getSignalPeriod().getGreenSecond();
+                        int yellowSecond = roads.get(EDirection.NORTH.name()).getTrafficSignal().getSignalPeriod().getYellowSecond();
+                        int radSecond = roads.get(EDirection.NORTH.name()).getTrafficSignal().getSignalPeriod().getRedSecond();
+
+                        trafficJamRoads.add(EDirection.NORTH.name());
+                        trafficJamRoads.add(EDirection.SOUTH.name());
+
+                        TrafficSignalPeriod trafficJamSignalPeriod = new TrafficSignalPeriod(greenSecond + x, yellowSecond, radSecond - x);
+                        TrafficSignalPeriod nonTrafficJamSignalPeriod = new TrafficSignalPeriod(greenSecond - x, yellowSecond, radSecond + x);
+
+                        switchMode(EMode.TRAFFIC_JAM, trafficJamRoads, trafficJamSignalPeriod, nonTrafficJamSignalPeriod);
+
+                    } else if (weScore >= trafficJamCondition) {
+                        int x = (weScore - trafficJamCondition) / 5;
+
+                        TrafficSignalPeriod currentSignalPeriod = roads.get(EDirection.WEST.name()).getTrafficSignal().getSignalPeriod();
+
+                        int greenSecond = currentSignalPeriod.getGreenSecond();
+                        int yellowSecond = currentSignalPeriod.getYellowSecond();
+                        int radSecond = currentSignalPeriod.getRedSecond();
+
+                        trafficJamRoads.add(EDirection.NORTH.name());
+                        trafficJamRoads.add(EDirection.SOUTH.name());
+
+                        TrafficSignalPeriod trafficJamSignalPeriod = new TrafficSignalPeriod(greenSecond + x, yellowSecond, radSecond - x);
+                        TrafficSignalPeriod nonTrafficJamSignalPeriod = new TrafficSignalPeriod(greenSecond - x, yellowSecond, radSecond + x);
+
+                        switchMode(EMode.TRAFFIC_JAM, trafficJamRoads, trafficJamSignalPeriod, nonTrafficJamSignalPeriod);
+                    }else {
+                        switchMode(EMode.NORMAL, null, null, null);
+                    }
+                }
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
-
-                if (!Objects.equals(roads.get(EDirection.EAST.name()).getTrafficSignal().getSignal(), ESignal.YELLOW.name()))
-                    continue;
-                System.out.println("黃燈!");
-
-                // coordinateSouth, coordinateNorth, coordinateWest, coordinateEast 1 2 3 4
-                CCTVImages = cctvRepository.getCCTV();
-                scanVehicle.scan(CCTVImages.get(0));
-                scanVehicle.scan(CCTVImages.get(1));
-                scanVehicle.scan(CCTVImages.get(2));
-                scanVehicle.scan(CCTVImages.get(3));
             }
-        }
-    };
-
-    private Runnable updateTrafficStatus = new Runnable() {
-        @Override
-        public void run() {
-
-        }
-    };
-
-    private Runnable checkEmergency = new Runnable() {
-        @Override
-        public void run() {
-
-        }
-    };
-
-    private Runnable checkTrafficGam = new Runnable() {
-        @Override
-        public void run() {
-
         }
     };
 
@@ -161,19 +197,39 @@ public class DynamicSmartTrafficSignal extends WebSocketClient {
             String instruction = root.path("instruction").asText();
             if (instruction.equals(EInstruction.SEND_DATA_TRAFFIC_PERIOD.name())) {
                 Iterator<Map.Entry<String, JsonNode>> nodes = root.get("data").fields();
-                TrafficSignalPeriod period = new TrafficSignalPeriod();
                 while (nodes.hasNext()) {
                     Map.Entry<String, JsonNode> entry = nodes.next();
+                    TrafficSignalPeriod period = new TrafficSignalPeriod();
                     period.setGreenSecond(entry.getValue().get(ESignal.GREEN.name()).asInt());
                     period.setYellowSecond(entry.getValue().get(ESignal.YELLOW.name()).asInt());
                     period.setRedSecond(entry.getValue().get(ESignal.RED.name()).asInt());
                     roads.get(entry.getKey()).getTrafficSignal().setSignalPeriod(period);
                 }
-            } else if (instruction.equals(EInstruction.SEND_DATA_CURRENT_TRAFFIC_STATE.name())) {
+
+            } else if (instruction.equals(EInstruction.SEND_DATA_CURRENT_TRAFFIC_SIGNAL_STATE.name())) {
                 Iterator<Map.Entry<String, JsonNode>> nodes = root.get("data").fields();
                 while (nodes.hasNext()) {
                     Map.Entry<String, JsonNode> entry = nodes.next();
                     roads.get(entry.getKey()).getTrafficSignal().setSignal(entry.getValue().asText());
+                }
+            } else if (instruction.equals(EInstruction.SEND_DATA_CURRENT_TRAFFIC_STATUS.name())) {
+                Iterator<Map.Entry<String, JsonNode>> nodes = root.get("data").fields();
+                while (nodes.hasNext()) {
+                    Map.Entry<String, JsonNode> entry = nodes.next();
+
+                    ArrayList<Vehicle> vehicles = new ArrayList<>();
+
+                    vehicles.add(new Motorcycle(entry.getValue().get(EVehicle.BIKE.name()).asInt()));
+                    vehicles.add(new Car(entry.getValue().get(EVehicle.CAR.name()).asInt()));
+                    vehicles.add(new HeavyVehicle(entry.getValue().get(EVehicle.BUS.name()).asInt() + entry.getValue().get(EVehicle.TRUCK.name()).asInt()));
+
+                    roads.get(entry.getKey()).setVehicles(vehicles);
+
+//                    int a = 0;
+//                    for (Vehicle v : roads.get(entry.getKey()).getVehicles()) {
+//                        a += v.getAmount();
+//                    }
+//                    System.out.printf("%s: %d\n", entry.getKey(), a);
                 }
             }
         } catch (JsonProcessingException e) {

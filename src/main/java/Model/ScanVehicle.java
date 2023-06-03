@@ -27,6 +27,8 @@ public class ScanVehicle {
     private String modelConfigurationPath;
     private String cocoLabelPath;
 
+    private Mat image;
+
     public ScanVehicle() {
         nu.pattern.OpenCV.loadLocally();
 
@@ -43,7 +45,7 @@ public class ScanVehicle {
         Mat imgMat = new Mat(1, imgData.length, CvType.CV_8UC1);
         imgMat.put(0, 0, imgData);
 
-        Mat img = Imgcodecs.imdecode(imgMat, Imgcodecs.IMREAD_COLOR);
+        image = Imgcodecs.imdecode(imgMat, Imgcodecs.IMREAD_COLOR);
 
         List<String> classes;
         try {
@@ -60,23 +62,29 @@ public class ScanVehicle {
         MatOfInt classIds = new MatOfInt();
         MatOfFloat scores = new MatOfFloat();
         MatOfRect boxes = new MatOfRect();
-        model.detect(img, classIds, scores, boxes, 0.5f, 0.5f);
+        model.detect(image, classIds, scores, boxes, 0.5f, 0.5f);
 
         for (int i = 0; i < classIds.rows(); i++) {
             Rect box = new Rect(boxes.get(i, 0));
-            Imgproc.rectangle(img, box, new Scalar(0, 255, 0), 2);
+            Imgproc.rectangle(image, box, new Scalar(0, 255, 0), 2);
 
             int classId = (int) classIds.get(i, 0)[0];
             double score = scores.get(i, 0)[0];
             String text = String.format("%s: %.2f", classes.get(classId), score);
+
+            markVehicle(text, new Point(box.x, box.y - 5));
+
             System.out.println(text);
-            Imgproc.putText(img, text, new Point(box.x, box.y - 5), Imgproc.FONT_HERSHEY_SIMPLEX, 1, new Scalar(0, 255, 0), 2);
         }
     }
 
-    public int getVehicleCount() {return 0;}
+    public ArrayList<Vehicle> getVehicles() {
+        return vehicles;
+    }
 
-    public void markVehicle() {}
+    public void markVehicle(String text, Point point) {
+        Imgproc.putText(image, text, point, Imgproc.FONT_HERSHEY_SIMPLEX, 1, new Scalar(0, 255, 0), 2);
+    }
 
     public void calTypeOfVehicle() {}
 

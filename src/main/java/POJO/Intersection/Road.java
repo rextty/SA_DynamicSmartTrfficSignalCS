@@ -8,6 +8,7 @@ import Enum.EDirection;
 
 import java.util.ArrayList;
 
+// 如果有懂java的人看到，想修改就修，我提供自己的思路作為參考而已
 public class Road {
     private int score;
     private int roadID;
@@ -34,7 +35,16 @@ public class Road {
         trafficSignal = new TrafficSignal();
     }
 
-    public void calScore() {}
+    public void calScore() {
+        // 各車種自己的分數計算是可以這樣直接呼叫去計算的嗎
+        score = 0;
+        for (Vehicle vehicle : vehicles) {
+            // 呼叫calScore()函數後當前車車物件score就有值
+            vehicle.calScore();
+            // 呼叫getScore()函數獲得當前車車score
+            score += vehicle.getScore();
+        }
+    }
 
     public void setScore(int score) {
         this.score = score;
@@ -48,6 +58,7 @@ public class Road {
         this.roadName = roadName;
     }
 
+    // RoadScoreCalculator 會需要知道道路的方向，以進行NS或WE向的道路分數加總
     public void setDirection(EDirection direction) {
         this.direction = direction;
     }
@@ -72,6 +83,7 @@ public class Road {
         return roadName;
     }
 
+    // RoadScoreCalculator 會需要知道道路的方向，以進行NS或WE向的道路分數加總
     public EDirection getDirection() {
         return direction;
     }

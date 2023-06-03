@@ -1,9 +1,9 @@
 package POJO.Vehicle;
 
-class HeavyVehicle extends Vehicle {
+public class HeavyVehicle extends Vehicle {
 
     public HeavyVehicle(int amount) {
         super(amount);
-        this.weight = 20;
+        this.weight = 30;
     }
 }
