@@ -39,7 +39,7 @@ public class EmergencyRepository {
         }
     }
 
-    public static void main(String[] args) throws SQLException {
+    public static void main(String[] args) {
         EmergencyRepository repository = new EmergencyRepository();
         System.out.println(repository.checkEmergency());
     }

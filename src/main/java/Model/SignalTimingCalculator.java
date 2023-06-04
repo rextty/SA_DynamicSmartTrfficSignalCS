@@ -28,11 +28,15 @@ public class SignalTimingCalculator {
         trafficJamRoads = new ArrayList<>();
 
         if (nsScore >= weScore) {
-
             trafficJamRoads.add(EDirection.NORTH.name());
             trafficJamRoads.add(EDirection.SOUTH.name());
 
-            int time = (nsScore - trafficJamCondition) / 5;
+            int time = (nsScore - trafficJamCondition) / 10;
+            // TODO: 這邊有閥值
+            if (time >= 25) {
+                time = 25;
+            }
+
             int greenSecond = 30;
             int yellowSecond = 5;
             int radSecond = 30;
@@ -40,17 +44,20 @@ public class SignalTimingCalculator {
             trafficJamSignalPeriod = new TrafficSignalPeriod(greenSecond + time, yellowSecond, radSecond - time);
             nonTrafficJamSignalPeriod = new TrafficSignalPeriod(greenSecond - time, yellowSecond, radSecond + time);
         } else {
-            int x = (weScore - trafficJamCondition) / 5;
+            trafficJamRoads.add(EDirection.WEST.name());
+            trafficJamRoads.add(EDirection.EAST.name());
+            // TODO: 這邊有閥值
+            int time = (weScore - trafficJamCondition) / 10;
+            if (time >= 25) {
+                time = 25;
+            }
 
             int greenSecond = 30;
             int yellowSecond = 5;
             int radSecond = 30;
 
-            trafficJamRoads.add(EDirection.NORTH.name());
-            trafficJamRoads.add(EDirection.SOUTH.name());
-
-            trafficJamSignalPeriod = new TrafficSignalPeriod(greenSecond + x, yellowSecond, radSecond - x);
-            nonTrafficJamSignalPeriod = new TrafficSignalPeriod(greenSecond - x, yellowSecond, radSecond + x);
+            trafficJamSignalPeriod = new TrafficSignalPeriod(greenSecond + time, yellowSecond, radSecond - time);
+            nonTrafficJamSignalPeriod = new TrafficSignalPeriod(greenSecond - time, yellowSecond, radSecond + time);
         }
     }
 

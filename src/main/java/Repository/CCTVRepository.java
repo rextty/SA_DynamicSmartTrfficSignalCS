@@ -10,11 +10,9 @@ import java.util.ArrayList;
 
 public class CCTVRepository {
     private JDBCConnector connector;
-    private Connection connection;
 
     public CCTVRepository() {
         connector = new JDBCConnector();
-        connection = connector.getConnection();
     }
 
     public ArrayList<String> getCCTV()  {
@@ -22,7 +20,7 @@ public class CCTVRepository {
 
         ArrayList<String> results = new ArrayList<>();
         try {
-            ResultSet resultSet = connection.createStatement().executeQuery(query);
+            ResultSet resultSet = connector.executeQuery(query);
             while (resultSet.next()) {
                 results.add(resultSet.getString("image"));
             }

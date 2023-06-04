@@ -2,7 +2,7 @@ package POJO.Intersection;
 
 import Model.TrafficSignal;
 
-import POJO.Vehicle.Vehicle;
+import POJO.Vehicle;
 
 import Enum.EDirection;
 
@@ -35,19 +35,25 @@ public class Road {
         trafficSignal = new TrafficSignal();
     }
 
-    public void calScore() {
-        // 各車種自己的分數計算是可以這樣直接呼叫去計算的嗎
+    public Road(EDirection direction, ArrayList<Vehicle> vehicles) {
+        score = 0;
+        roadID = 0;
+        roadName = "";
+        this.vehicles = vehicles;
+        this.direction = direction;
+        trafficSignal = new TrafficSignal();
+    }
+
+    public void calRoadScore() {
         score = 0;
         for (Vehicle vehicle : vehicles) {
-            // 呼叫calScore()函數後當前車車物件score就有值
             vehicle.calScore();
-            // 呼叫getScore()函數獲得當前車車score
             score += vehicle.getScore();
         }
     }
 
-    public void setScore(int score) {
-        this.score = score;
+    public void setVehicles(ArrayList<Vehicle> vehicles) {
+        this.vehicles = vehicles;
     }
 
     public void setRoadID(int roadID) {
@@ -58,17 +64,12 @@ public class Road {
         this.roadName = roadName;
     }
 
-    // RoadScoreCalculator 會需要知道道路的方向，以進行NS或WE向的道路分數加總
     public void setDirection(EDirection direction) {
         this.direction = direction;
     }
 
     public void setTrafficSignal(TrafficSignal trafficSignal) {
         this.trafficSignal = trafficSignal;
-    }
-
-    public void setVehicles(ArrayList<Vehicle> vehicles) {
-        this.vehicles = vehicles;
     }
 
     public int getScore() {

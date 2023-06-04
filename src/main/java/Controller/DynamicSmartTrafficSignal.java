@@ -9,12 +9,9 @@ import Enum.*;
 
 
 import POJO.TrafficPeriodData;
-import POJO.Vehicle.Car;
-import POJO.Vehicle.HeavyVehicle;
-import POJO.Vehicle.Motorcycle;
-import POJO.Vehicle.Vehicle;
-import Repository.CCTVRepository;
+import POJO.Vehicle;
 import Repository.EmergencyRepository;
+import Repository.VehicleRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,13 +28,14 @@ public class DynamicSmartTrafficSignal extends WebSocketClient {
     private final EmergencyRepository emergencyRepository;
     private final RoadScoreCalculator scoreCalculator;
     private final SignalTimingCalculator timingCalculator;
-
     private EMode solutionMode;
     private final ScanVehicle scanVehicle;
 
     private final TrafficSignal trafficSignal;
 
     private final ArrayList<String> CCTVImages;
+
+    private final VehicleRepository vehicleRepository;
 
     private final int trafficJamCondition;
 
@@ -47,22 +45,25 @@ public class DynamicSmartTrafficSignal extends WebSocketClient {
 
         CCTVImages = new ArrayList<>();
         solutionMode = EMode.NORMAL;
+        // TODO: 這邊是堵塞條件
         trafficJamCondition = 300;
 
         mapper = new ObjectMapper();
         scanVehicle = new ScanVehicle();
         trafficSignal = new TrafficSignal();
-        emergencyRepository = new EmergencyRepository();
         scoreCalculator = new RoadScoreCalculator();
         timingCalculator = new SignalTimingCalculator();
+
+        vehicleRepository = new VehicleRepository();
+        emergencyRepository = new EmergencyRepository();
 
         initialization();
 
         Thread trafficJamThread = new Thread(checkTrafficJam);
         trafficJamThread.start();
 
-        Thread emergencyThread = new Thread(checkEmergency);
-        emergencyThread.start();
+//        Thread emergencyThread = new Thread(checkEmergency);
+//        emergencyThread.start();
 
         // Update Traffic Status
         Communication communication = new Communication();
@@ -79,7 +80,6 @@ public class DynamicSmartTrafficSignal extends WebSocketClient {
 
             Thread.sleep(1000);
         }
-        // TODO: 兩種方式取得紅綠燈資訊, 1. 定期請求資料 2. 有需要時我再去取得資料 目前是1
     }
 
     public void test() {
@@ -92,6 +92,8 @@ public class DynamicSmartTrafficSignal extends WebSocketClient {
     }
 
     private void initialization() {
+        ArrayList<Vehicle> initVehicles = vehicleRepository.getAllVehicle();
+
         Road roadEast = new Road(EDirection.EAST);
         Road roadWest = new Road(EDirection.WEST);
         Road roadSouth = new Road(EDirection.SOUTH);
@@ -102,6 +104,16 @@ public class DynamicSmartTrafficSignal extends WebSocketClient {
         roads.put(roadWest.getDirection().name(), roadWest);
         roads.put(roadSouth.getDirection().name(), roadSouth);
         roads.put(roadNorth.getDirection().name(), roadNorth);
+
+        roads.forEach((s, road) -> {
+            // Deep Copy...? too weird...
+            ArrayList<Vehicle> tempVehicles = new ArrayList<>();
+            for (Vehicle vehicle : initVehicles) {
+                Vehicle copyVehicle = new Vehicle(vehicle.getName(), vehicle.getWeight());
+                tempVehicles.add(copyVehicle);
+            }
+            road.setVehicles(tempVehicles);
+        });
     }
 
     private void switchMode(EMode mode, ArrayList<String> trafficJamRoad, TrafficSignalPeriod trafficJam, TrafficSignalPeriod nonTrafficJam) {
@@ -213,19 +225,11 @@ public class DynamicSmartTrafficSignal extends WebSocketClient {
                 while (nodes.hasNext()) {
                     Map.Entry<String, JsonNode> entry = nodes.next();
 
-                    ArrayList<Vehicle> vehicles = new ArrayList<>();
-
-                    vehicles.add(new Motorcycle(entry.getValue().get(EVehicle.BIKE.name()).asInt()));
-                    vehicles.add(new Car(entry.getValue().get(EVehicle.CAR.name()).asInt()));
-                    vehicles.add(new HeavyVehicle(entry.getValue().get(EVehicle.BUS.name()).asInt() + entry.getValue().get(EVehicle.TRUCK.name()).asInt()));
-
-                    roads.get(entry.getKey()).setVehicles(vehicles);
-
-//                    int a = 0;
-//                    for (Vehicle v : roads.get(entry.getKey()).getVehicles()) {
-//                        a += v.getAmount();
-//                    }
-//                    System.out.printf("%s: %d\n", entry.getKey(), a);
+                    ArrayList<Vehicle> vehicles = roads.get(entry.getKey()).getVehicles();
+                    for (Vehicle vehicle : vehicles) {
+                        int vehicleQuantity = entry.getValue().get(vehicle.getName().toUpperCase()).asInt();
+                        vehicle.setQuantity(vehicleQuantity);
+                    }
                 }
             }
         } catch (JsonProcessingException e) {

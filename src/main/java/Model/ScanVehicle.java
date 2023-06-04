@@ -1,15 +1,13 @@
 package Model;
 
-import POJO.Vehicle.Vehicle;
+import POJO.Vehicle;
 import org.opencv.core.*;
 import org.opencv.dnn.DetectionModel;
 import org.opencv.dnn.Dnn;
 import org.opencv.dnn.Net;
-import org.opencv.highgui.HighGui;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -18,9 +16,6 @@ import java.util.Base64;
 import java.util.List;
 
 public class ScanVehicle {
-
-    private String modelString;
-
     private ArrayList<Vehicle> vehicles;
 
     private String modelWeightsPath;
@@ -40,7 +35,7 @@ public class ScanVehicle {
 
     public void initialization() {}
 
-    public void scan(String base64Str) {
+    public void calTypeOfVehicle(String base64Str) {
         byte[] imgData = Base64.getDecoder().decode(base64Str);
         Mat imgMat = new Mat(1, imgData.length, CvType.CV_8UC1);
         imgMat.put(0, 0, imgData);
@@ -80,6 +75,10 @@ public class ScanVehicle {
 
     public ArrayList<Vehicle> getVehicles() {
         return vehicles;
+    }
+
+    public void showScannedImage() {
+
     }
 
     public void markVehicle(String text, Point point) {
