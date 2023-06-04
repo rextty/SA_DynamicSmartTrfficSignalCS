@@ -2,6 +2,10 @@ package Model;
 
 import POJO.Intersection.TrafficSignalPeriod;
 
+import Enum.EDirection;
+
+import java.util.ArrayList;
+
 public class SignalTimingCalculator {
 
     // private int signalTime;
@@ -10,9 +14,9 @@ public class SignalTimingCalculator {
     // 照循序圖，調整過後的秒數（綠燈）我們是分成NS和WE兩個
     private TrafficSignalPeriod trafficJamSignalPeriod;
 
-    private TrafficSignalPeriod nonTrafficJamSignalPeriod;
+    private ArrayList<String> trafficJamRoads;
 
-    private final int trafficJamCondition = 300;
+    private TrafficSignalPeriod nonTrafficJamSignalPeriod;
 
     public SignalTimingCalculator() {
         trafficJamSignalPeriod = new TrafficSignalPeriod();
@@ -20,7 +24,14 @@ public class SignalTimingCalculator {
     }
 
     public void calSignalTime(int nsScore, int weScore) {
+        int trafficJamCondition = 300;
+        trafficJamRoads = new ArrayList<>();
+
         if (nsScore >= weScore) {
+
+            trafficJamRoads.add(EDirection.NORTH.name());
+            trafficJamRoads.add(EDirection.SOUTH.name());
+
             int time = (nsScore - trafficJamCondition) / 5;
             int greenSecond = 30;
             int yellowSecond = 5;
@@ -35,6 +46,9 @@ public class SignalTimingCalculator {
             int yellowSecond = 5;
             int radSecond = 30;
 
+            trafficJamRoads.add(EDirection.NORTH.name());
+            trafficJamRoads.add(EDirection.SOUTH.name());
+
             trafficJamSignalPeriod = new TrafficSignalPeriod(greenSecond + x, yellowSecond, radSecond - x);
             nonTrafficJamSignalPeriod = new TrafficSignalPeriod(greenSecond - x, yellowSecond, radSecond + x);
         }
@@ -46,5 +60,9 @@ public class SignalTimingCalculator {
 
     public TrafficSignalPeriod getTrafficJamSignalPeriod() {
         return trafficJamSignalPeriod;
+    }
+
+    public ArrayList<String> getTrafficJamRoads() {
+        return trafficJamRoads;
     }
 }

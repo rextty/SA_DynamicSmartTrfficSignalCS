@@ -2,17 +2,16 @@ package Model;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class JDBCConnector {
 
     private Connection connection;
-    private AppConfig config;
 
     public JDBCConnector() {
         try {
-            config = new AppConfig();
-            // TODO:
+            AppConfig config = new AppConfig();
             // Class.forName("com.mysql.jdbc.Driver");
             // Loading class `com.mysql.jdbc.Driver'.
             // This is deprecated. The new driver class is `com.mysql.cj.jdbc.Driver'. The driver is automatically registered via the SPI and manual loading of the driver class is generally unnecessary.
@@ -22,11 +21,15 @@ public class JDBCConnector {
         }
     }
 
-    public Connection getConnection() {
-        return connection;
+    public ResultSet executeQuery(String query) throws SQLException {
+        return connection.createStatement().executeQuery(query);
     }
 
-    void disconnect() throws SQLException {
+    public int updateQuery(String query) throws SQLException {
+        return connection.createStatement().executeUpdate(query);
+    }
+
+    public void disconnect() throws SQLException {
         connection.close();
     }
 

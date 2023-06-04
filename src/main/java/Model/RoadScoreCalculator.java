@@ -38,7 +38,6 @@ public class RoadScoreCalculator {
         for (Map.Entry<String, Road> entry : roads.entrySet()) {
             Road road = entry.getValue();
 
-            // direction是int，具體數值是？（暫以字元表示，較好理解）
             if(road.getDirection() == EDirection.NORTH || road.getDirection() == EDirection.SOUTH) {
                 road.calScore();
                 NSRoadScore += road.getScore();
